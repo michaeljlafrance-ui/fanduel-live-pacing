@@ -16,12 +16,15 @@ hd = {
 
 if st.button("🔄 Refresh Live Boards", type="primary"):
     try:
-        # STEP 1: Fetch Live Events
+        # STEP 1: Fetch Live Events using specific league routing rules
         u1 = f"https://{H}/v2/events"
-        p1 = {"status": "live", "sport": "basketball"}
+        p1 = {
+            "status": "pending,live",
+            "sport": "basketball",
+            "league": "usa-nba"  # Aligned to match dashboard structure requirements
+        }
         res = requests.get(u1, headers=hd, params=p1)
         
-        # Diagnostics: Show the precise error payload from the server
         if res.status_code != 200:
             st.error(f"API Error Code: {res.status_code}")
             st.warning(f"Server Raw Response: {res.text}")
@@ -29,7 +32,7 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             
         data = res.json()
         if not data:
-            st.info("No live games right now.")
+            st.info("No active games found trading under this league right now.")
             st.stop()
             
         id_map = {}
@@ -93,7 +96,7 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             df = pd.DataFrame(rows, columns=cols)
             st.dataframe(df, use_container_width=True, hide_index=True)
         else:
-            st.info("No active lines on FanDuel.")
+            st.info("No active lines open on FanDuel.")
             
     except Exception as e:
         st.error(f"Crash: {str(e)}")
