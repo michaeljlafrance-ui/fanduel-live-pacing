@@ -16,19 +16,17 @@ hd = {
 
 if st.button("🔄 Refresh Live Boards", type="primary"):
     try:
-        # STEP 1: Fetch Live Events (Using the required /v2/ path structure)
+        # STEP 1: Fetch Live Events
         u1 = f"https://{H}/v2/events"
         p1 = {"status": "live", "sport": "basketball"}
         res = requests.get(u1, headers=hd, params=p1)
         
-        # If the API returns a 404 here, it indicates 0 active live basketball events
         if res.status_code == 404:
-            st.info("No active live basketball games are currently trading on the feed.")
+            st.info("No active live games right now.")
             st.stop()
             
         if res.status_code != 200:
             st.error(f"API Error Code: {res.status_code}")
-            st.warning(f"Server Raw Response: {res.text}")
             st.stop()
             
         data = res.json()
@@ -99,4 +97,13 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
         if rows:
             cols = ["ID", "League", "Matchup", "Market", "Line", "Q Pace", "Alert"]
             df = pd.DataFrame(rows, columns=cols)
-            st.dataframe(df, use_container_width=True, hide
+            
+            # Shortened display variables to prevent line truncation
+            w = True
+            hi = True
+            st.dataframe(df, use_container_width=w, hide_index=hi)
+        else:
+            st.info("No active lines open on FanDuel right now.")
+            
+    except Exception as e:
+        st.error(f"Crash: {str(e)}")
