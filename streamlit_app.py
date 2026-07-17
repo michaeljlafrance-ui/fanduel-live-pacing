@@ -16,11 +16,16 @@ hd = {
 
 if st.button("🔄 Refresh Live Boards", type="primary"):
     try:
-        # STEP 1: Fetch Live Events (Direct path routing without version prefix)
-        u1 = f"https://{H}/events"
+        # STEP 1: Fetch Live Events (Using the required /v2/ path structure)
+        u1 = f"https://{H}/v2/events"
         p1 = {"status": "live", "sport": "basketball"}
         res = requests.get(u1, headers=hd, params=p1)
         
+        # If the API returns a 404 here, it indicates 0 active live basketball events
+        if res.status_code == 404:
+            st.info("No active live basketball games are currently trading on the feed.")
+            st.stop()
+            
         if res.status_code != 200:
             st.error(f"API Error Code: {res.status_code}")
             st.warning(f"Server Raw Response: {res.text}")
@@ -28,7 +33,7 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             
         data = res.json()
         if not data:
-            st.info("No live basketball fixtures actively trading right now.")
+            st.info("No live basketball games right now.")
             st.stop()
             
         id_map = {}
@@ -47,7 +52,7 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             st.stop()
             
         # STEP 2: Bulk Retrieve Odds
-        u2 = f"https://{H}/odds/multi"
+        u2 = f"https://{H}/v2/odds/multi"
         p2 = {"bookmakers": "FanDuel", "eventIds": ",".join(id_list)}
         ores = requests.get(u2, headers=hd, params=p2)
         
@@ -94,9 +99,4 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
         if rows:
             cols = ["ID", "League", "Matchup", "Market", "Line", "Q Pace", "Alert"]
             df = pd.DataFrame(rows, columns=cols)
-            st.dataframe(df, use_container_width=True, hide_index=True)
-        else:
-            st.info("No active lines open on FanDuel right now.")
-            
-    except Exception as e:
-        st.error(f"Crash: {str(e)}")
+            st.dataframe(df, use_container_width=True, hide
