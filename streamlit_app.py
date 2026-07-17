@@ -80,18 +80,4 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
                     
                 markets = fd_book.get('markets') or fd_book.get('totals') or []
                 target_mkt = markets[0] if isinstance(markets, list) and len(markets) > 0 else markets
-                if not target_mkt or 'outcomes' not in target_mkt:
-                    continue
-                    
-                for out in target_mkt['outcomes']:
-                    line_val = out.get('point') or out.get('line') or 0.0
-                    choice = out.get('name', 'OVER').upper()
-                    
-                    implied_match_pace = float(line_val)
-                    implied_quarter_pace = round(implied_match_pace / 4, 1)
-                    
-                    alert_flag = "NORMAL PACE"
-                    if implied_quarter_pace >= 54.5:
-                        alert_flag = "⚠️ EXTENDED PACE: Target Quarter Under Spot"
-                        
-                    rows.append([m_id, meta["League"], meta["Matchup"], f"TOTAL ({choice})", implied_match_pace, implied
+                if not target_mkt
