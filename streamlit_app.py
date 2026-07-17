@@ -23,23 +23,19 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             # STEP 1: Fetch Active Live Events
             events_url = f"https://{RAPIDAPI_HOST}/v2/events"
             events_params = {"status": "live", "sport": "basketball"}
-            
             events_res = requests.get(events_url, headers=headers, params=events_params)
             
             if events_res.status_code != 200:
-                st.error(f"Events Index Error: {events_res.status_code}")
-                st.warning(f"Server Routing Response: {events_res.text}")
+                st.error(f"Events Index Error: {events_res.status_code} - {events_res.text}")
                 st.stop()
                 
             events_data = events_res.json()
-            
             if not events_data:
                 st.info("No live basketball fixtures actively trading right now.")
                 st.stop()
                 
             id_map = {}
             id_list = []
-            
             for ev in events_data:
                 if not ev or 'id' not in ev:
                     continue
@@ -58,7 +54,6 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             encoded_ids = ",".join(id_list)
             odds_url = f"https://{RAPIDAPI_HOST}/v2/odds/multi"
             odds_params = {"bookmakers": "FanDuel", "eventIds": encoded_ids}
-            
             odds_res = requests.get(odds_url, headers=headers, params=odds_params)
             
             if odds_res.status_code != 200:
@@ -78,16 +73,13 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
                 
                 bookmakers = item['bookmakers']
                 fd_book = bookmakers.get('fanduel') or bookmakers.get('FanDuel')
-                
                 if not fd_book and isinstance(bookmakers, list) and len(bookmakers) > 0:
                     fd_book = bookmakers[0]
-                    
                 if not fd_book:
                     continue
                     
                 markets = fd_book.get('markets') or fd_book.get('totals') or []
                 target_mkt = markets[0] if isinstance(markets, list) and len(markets) > 0 else markets
-                
                 if not target_mkt or 'outcomes' not in target_mkt:
                     continue
                     
@@ -102,6 +94,8 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
                     if implied_quarter_pace >= 54.5:
                         alert_flag = "⚠️ EXTENDED PACE: Target Quarter Under Spot"
                         
-                    rows.append({
-                        "Event ID": m_id,
-                        "League": meta
+                    # Pure flat array layout - zero dict braces to break indentation
+                    rows.append([m_id, meta["League"], meta["Matchup"], f"TOTAL ({choice})", implied_match_pace, implied_match_pace, implied_quarter_pace, alert_flag])
+                    
+            if rows:
+                cols =
