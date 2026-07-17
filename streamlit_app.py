@@ -94,8 +94,4 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
                     if implied_quarter_pace >= 54.5:
                         alert_flag = "⚠️ EXTENDED PACE: Target Quarter Under Spot"
                         
-                    # Pure flat array layout - zero dict braces to break indentation
-                    rows.append([m_id, meta["League"], meta["Matchup"], f"TOTAL ({choice})", implied_match_pace, implied_match_pace, implied_quarter_pace, alert_flag])
-                    
-            if rows:
-                cols =
+                    rows.append([m_id, meta["League"], meta["Matchup"], f"TOTAL ({choice})", implied_match_pace, implied
