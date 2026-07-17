@@ -21,8 +21,10 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
         p1 = {"status": "live", "sport": "basketball"}
         res = requests.get(u1, headers=hd, params=p1)
         
+        # Diagnostics: Show the precise error payload from the server
         if res.status_code != 200:
-            st.error("API Error")
+            st.error(f"API Error Code: {res.status_code}")
+            st.warning(f"Server Raw Response: {res.text}")
             st.stop()
             
         data = res.json()
@@ -53,7 +55,7 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
         odata = ores.json()
         rows = []
         
-        # STEP 3: Parse Data with Ultra-Short Lines
+        # STEP 3: Parse Data
         for item in odata:
             if not item or 'bookmakers' not in item:
                 continue
@@ -76,7 +78,6 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
                 qp = round(line / 4, 1)
                 alt = "⚠️ EXTENDED" if qp >= 54.5 else "NORMAL"
                 
-                # Tiny vertical stack to guarantee no clipping
                 r = []
                 r.append(mid)
                 r.append(meta["L"].upper())
