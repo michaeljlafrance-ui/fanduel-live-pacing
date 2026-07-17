@@ -16,9 +16,10 @@ hd = {
 
 if st.button("🔄 Refresh Live Boards", type="primary"):
     try:
-        # Testing the alternative root sports endpoint to check valid paths
-        u1 = f"https://{H}/v2/sports"
-        res = requests.get(u1, headers=hd)
+        # STEP 1: Fetch Live Events (Direct path routing without version prefix)
+        u1 = f"https://{H}/events"
+        p1 = {"status": "live", "sport": "basketball"}
+        res = requests.get(u1, headers=hd, params=p1)
         
         if res.status_code != 200:
             st.error(f"API Error Code: {res.status_code}")
@@ -26,11 +27,76 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             st.stop()
             
         data = res.json()
+        if not data:
+            st.info("No live basketball fixtures actively trading right now.")
+            st.stop()
+            
+        id_map = {}
+        id_list = []
+        for ev in data:
+            if ev and 'id' in ev:
+                eid = str(ev['id'])
+                id_list.append(eid)
+                id_map[eid] = {
+                    "L": ev.get("league", "BASKETBALL"),
+                    "M": f"{ev.get('away')} @ {ev.get('home')}"
+                }
         
-        # Display the raw active structure so we can see the exact strings
-        st.success("Successfully connected to the API root!")
-        st.write("Active Sports / Leagues Payload:")
-        st.json(data)
+        if not id_list:
+            st.warning("No active match IDs recovered.")
+            st.stop()
+            
+        # STEP 2: Bulk Retrieve Odds
+        u2 = f"https://{H}/odds/multi"
+        p2 = {"bookmakers": "FanDuel", "eventIds": ",".join(id_list)}
+        ores = requests.get(u2, headers=hd, params=p2)
+        
+        if ores.status_code != 200:
+            st.error("Odds pipeline down.")
+            st.stop()
+            
+        odata = ores.json()
+        rows = []
+        
+        # STEP 3: Parse Data
+        for item in odata:
+            if not item or 'bookmakers' not in item:
+                continue
+            mid = str(item.get('id', item.get('eventId', '')))
+            meta = id_map.get(mid, {"L": "NBA", "M": "LIVE MATCH"})
+            
+            bm = item['bookmakers']
+            fd = bm.get('fanduel') or bm.get('FanDuel')
+            if not fd:
+                continue
+            
+            mkts = fd.get('markets') or fd.get('totals') or []
+            mkt = mkts[0] if isinstance(mkts, list) else mkts
+            if not mkt or 'outcomes' not in mkt:
+                continue
+            
+            for out in mkt['outcomes']:
+                line = float(out.get('point') or 0.0)
+                lbl = out.get('name', 'OVER').upper()
+                qp = round(line / 4, 1)
+                alt = "⚠️ EXTENDED" if qp >= 54.5 else "NORMAL"
+                
+                r = []
+                r.append(mid)
+                r.append(meta["L"].upper())
+                r.append(meta["M"].upper())
+                r.append(f"TOTAL ({lbl})")
+                r.append(line)
+                r.append(qp)
+                r.append(alt)
+                rows.append(r)
+                
+        if rows:
+            cols = ["ID", "League", "Matchup", "Market", "Line", "Q Pace", "Alert"]
+            df = pd.DataFrame(rows, columns=cols)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No active lines open on FanDuel right now.")
             
     except Exception as e:
         st.error(f"Crash: {str(e)}")
