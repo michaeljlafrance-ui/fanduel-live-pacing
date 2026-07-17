@@ -20,20 +20,15 @@ headers = {
 if st.button("🔄 Refresh Live Boards", type="primary"):
     with st.spinner("Fetching live games from Odds-API.io..."):
         try:
-            # STEP 1: Fetch Active Live Events matching explicit dashboard filters
+            # STEP 1: Fetch Active Live Events
             events_url = f"https://{RAPIDAPI_HOST}/v2/events"
-            events_params = {
-                "status": "live",
-                "sport": "basketball"
-            }
+            events_params = {"status": "live", "sport": "basketball"}
             
             events_res = requests.get(events_url, headers=headers, params=events_params)
             
-            # Direct diagnostics: show raw payload on 404 to see routing demands
             if events_res.status_code != 200:
                 st.error(f"Events Index Error: {events_res.status_code}")
                 st.warning(f"Server Routing Response: {events_res.text}")
-                st.info("If the response reads '404 page not found', the endpoint needs custom league constraints.")
                 st.stop()
                 
             events_data = events_res.json()
@@ -62,3 +57,51 @@ if st.button("🔄 Refresh Live Boards", type="primary"):
             # STEP 2: Bulk Retrieve Odds via Multi Endpoint
             encoded_ids = ",".join(id_list)
             odds_url = f"https://{RAPIDAPI_HOST}/v2/odds/multi"
+            odds_params = {"bookmakers": "FanDuel", "eventIds": encoded_ids}
+            
+            odds_res = requests.get(odds_url, headers=headers, params=odds_params)
+            
+            if odds_res.status_code != 200:
+                st.error(f"Multi-Odds Retrieval Error: {odds_res.status_code}")
+                st.stop()
+                
+            odds_data = odds_res.json()
+            rows = []
+            
+            # STEP 3: Parse FanDuel Totals and Run Analytics Engine
+            for item in odds_data:
+                if not item or 'bookmakers' not in item:
+                    continue
+                    
+                m_id = str(item.get('id', item.get('eventId', '')))
+                meta = id_map.get(m_id, {"League": "BASKETBALL", "Matchup": "LIVE FIXTURE"})
+                
+                bookmakers = item['bookmakers']
+                fd_book = bookmakers.get('fanduel') or bookmakers.get('FanDuel')
+                
+                if not fd_book and isinstance(bookmakers, list) and len(bookmakers) > 0:
+                    fd_book = bookmakers[0]
+                    
+                if not fd_book:
+                    continue
+                    
+                markets = fd_book.get('markets') or fd_book.get('totals') or []
+                target_mkt = markets[0] if isinstance(markets, list) and len(markets) > 0 else markets
+                
+                if not target_mkt or 'outcomes' not in target_mkt:
+                    continue
+                    
+                for out in target_mkt['outcomes']:
+                    line_val = out.get('point') or out.get('line') or 0.0
+                    choice = out.get('name', 'OVER').upper()
+                    
+                    implied_match_pace = float(line_val)
+                    implied_quarter_pace = round(implied_match_pace / 4, 1)
+                    
+                    alert_flag = "NORMAL PACE"
+                    if implied_quarter_pace >= 54.5:
+                        alert_flag = "⚠️ EXTENDED PACE: Target Quarter Under Spot"
+                        
+                    rows.append({
+                        "Event ID": m_id,
+                        "League": meta
